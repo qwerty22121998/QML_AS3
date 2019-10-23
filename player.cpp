@@ -91,12 +91,14 @@ void Player::addToPlaylist(const QList<QUrl> &urls)
     for (auto &url: urls) {
 
         m_playlist->addMedia(url);
+        //        TagLib::MPEG::File f(url.path().toStdString().c_str());
 
         FileRef f(url.path().toStdString().c_str());
         Tag *tag = f.tag();
         Song song(QString::fromWCharArray(tag->title().toCWString()),
                   QString::fromWCharArray(tag->artist().toCWString()),url.toDisplayString(),
                   getAlbumArt(url));
+
 
         m_playlistModel->addSong(song);
 

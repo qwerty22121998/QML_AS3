@@ -3,6 +3,8 @@ import QtQuick.Controls 2.4
 import QtQuick.Layouts 1.1
 import QtMultimedia 5.8
 
+import "Utility.js" as Utility
+
 ApplicationWindow {
     visible: true
     width: 1920
@@ -62,7 +64,7 @@ ApplicationWindow {
                 font.pixelSize: 32
             }
             onClicked: {
-
+                mediaPlaylist.currentIndex = index
                 //                ...
             }
 
@@ -96,7 +98,7 @@ ApplicationWindow {
         anchors.topMargin: 20
         anchors.left: mediaPlaylist.right
         anchors.leftMargin: 20
-        //        text: ...
+        text: mediaPlaylist.currentItem.myData.title
         color: "white"
         font.pixelSize: 36
         onTextChanged: {
@@ -109,7 +111,7 @@ ApplicationWindow {
         anchors.top: audioTitle.bottom
         anchors.left: mediaPlaylist.right
         anchors.leftMargin: 20
-        //        text: ...
+        text: mediaPlaylist.currentItem.myData.singer
         color: "white"
         font.pixelSize: 32
     }
@@ -153,12 +155,12 @@ ApplicationWindow {
                 height: parent.height
                 y: 20
                 anchors.horizontalCenter: parent.horizontalCenter
-                //                source: ...
+                source: album_art
             }
 
             MouseArea {
                 anchors.fill: parent
-                //                onClicked: ...
+                onClicked: album_art_view.currentIndex = index
             }
         }
     }
@@ -172,7 +174,7 @@ ApplicationWindow {
         preferredHighlightBegin: 0.5
         preferredHighlightEnd: 0.5
         focus: true
-        //        model: ...
+        model: m_playListModel
         delegate: appDelegate
         pathItemCount: 3
         path: Path {
@@ -200,8 +202,7 @@ ApplicationWindow {
             }
         }
         onCurrentIndexChanged: {
-
-            //            ...
+            mediaPlaylist.currentIndex = currentIndex
         }
     }
     //Progress
@@ -211,7 +212,7 @@ ApplicationWindow {
         anchors.bottomMargin: 250
         anchors.left: mediaPlaylist.right
         anchors.leftMargin: 120
-        //        text: utility....(player.position)
+        text: Utility.toDuration(player.position)
         color: "white"
         font.pixelSize: 24
     }
@@ -223,8 +224,8 @@ ApplicationWindow {
         anchors.left: currentTime.right
         anchors.leftMargin: 20
         from: 0
-        //        to: ...
-        //        value: ...
+        to: player.duration
+        value: player.position
         background: Rectangle {
             x: progressBar.leftPadding
             y: progressBar.topPadding + progressBar.availableHeight / 2 - height / 2
@@ -254,8 +255,9 @@ ApplicationWindow {
             }
         }
         onMoved: {
-
-            //            ...
+            if (player.seekable) {
+                player.seek(value)
+            }
         }
     }
     Text {
@@ -264,7 +266,7 @@ ApplicationWindow {
         anchors.bottomMargin: 250
         anchors.left: progressBar.right
         anchors.leftMargin: 20
-        //        text: utility....(player.duration)
+        text: Utility.toDuration(player.duration)
         color: "white"
         font.pixelSize: 24
     }
@@ -277,10 +279,13 @@ ApplicationWindow {
         anchors.leftMargin: 120
         icon_off: "qrc:/Image/shuffle.png"
         icon_on: "qrc:/Image/shuffle-1.png"
-        //        status: ...
+        status: player.suffer
         onClicked: {
-
-            //          ...
+            if (!player.shuffer) {
+                player.shuffer = true
+            } else {
+                player.shuffer = false
+            }
         }
     }
     ButtonControl {
@@ -293,8 +298,8 @@ ApplicationWindow {
         icon_pressed: "qrc:/Image/hold-prev.png"
         icon_released: "qrc:/Image/prev.png"
         onClicked: {
-
-            //            ...
+            mediaPlaylist.currentIndex = Math.max(
+                        0, mediaPlaylist.currentIndex - 1)
         }
     }
     ButtonControl {
@@ -307,8 +312,10 @@ ApplicationWindow {
         icon_released: player.state
                        == MediaPlayer.PlayingState ? "qrc:/Image/pause.png" : "qrc:/Image/play.png"
         onClicked: {
-
-            //            ...
+            if (player.playbackState == MediaPlayer.PlayingState)
+                player.pause()
+            else
+                player.play()
         }
         Connections {
             target: player
@@ -327,8 +334,19 @@ ApplicationWindow {
         icon_pressed: "qrc:/Image/hold-next.png"
         icon_released: "qrc:/Image/next.png"
         onClicked: {
-
-            //            ...
+            if (player.shuffer) {
+                var currentIndex = mediaPlaylist.currentIndex
+                var newIndex = currentIndex
+                do {
+                    newIndex = Math.floor(
+                                Math.random(
+                                    ) * mediaPlaylist.count) % mediaPlaylist.count
+                    mediaPlaylist.currentIndex = newIndex
+                } while (newIndex === currentIndex)
+            } else if (mediaPlaylist.currentIndex < mediaPlaylist.count - 1
+                       && !player.shuffer) {
+                mediaPlaylist.currentIndex++
+            }
         }
     }
     SwitchButton {
@@ -340,8 +358,7 @@ ApplicationWindow {
         icon_off: "qrc:/Image/repeat.png"
         status: player.playlist.playbackMode === Playlist.Loop ? 1 : 0
         onClicked: {
-
-            //            ...
+            player.loops = status == 0 ? 1 : MediaPlayer.Infinite
         }
     }
     Connections {

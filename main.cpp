@@ -20,11 +20,11 @@ int main(int argc, char *argv[])
     QQmlApplicationEngine engine;
     Player player;
 
-    player.open();
+
 
     engine.rootContext()->setContextProperty("m_playListModel",player.m_playlistModel);
-    engine.rootContext()->setContextProperty("m_Player",player.m_player);
-    engine.rootContext()->setContextProperty("player",&player);
+    engine.rootContext()->setContextProperty("player",player.m_player);
+    engine.rootContext()->setContextProperty("m_player",&player);
     engine.load(QUrl(QStringLiteral("qrc:/main.qml")));
     if (engine.rootObjects().isEmpty())
         return -1;
