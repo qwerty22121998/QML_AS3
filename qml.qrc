@@ -31,6 +31,5 @@
         <file>ButtonControl.qml</file>
         <file>main.qml</file>
         <file>SwitchButton.qml</file>
-        <file>Utility.js</file>
     </qresource>
 </RCC>

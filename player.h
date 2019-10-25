@@ -73,6 +73,10 @@ using namespace TagLib;
 
 class Player : public QObject
 {
+
+    Q_PROPERTY(int random  MEMBER m_random)
+    Q_PROPERTY(int loop MEMBER m_loop)
+
     Q_OBJECT
 public:
     explicit Player(QObject *parent = nullptr);
@@ -82,13 +86,28 @@ public:
 public slots:
     void open();
     QString getTimeInfo(qint64 currentInfo);
+    void updatePlaybackMode();
+
+    void toggleRandom(){ m_random = !m_random; updatePlaybackMode();}
+    void toggleLoop() {m_loop = !m_loop; updatePlaybackMode();}
+
+    void next();
+    void prev();
+
+
+
 
 public:
-    QString getAlbumArt(QUrl url);
+    QString getAlbumArt(MPEG::File* mpegFile);
 
     QMediaPlayer *m_player = nullptr;
     QMediaPlaylist *m_playlist = nullptr;
     PlaylistModel *m_playlistModel = nullptr;
+    int m_random = 0;
+    int m_loop = 0;
+
+
+
 };
 
 #endif // PLAYER_H

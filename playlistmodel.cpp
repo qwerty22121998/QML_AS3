@@ -53,7 +53,7 @@
 #include <QFileInfo>
 #include <QUrl>
 #include <QMediaPlaylist>
-
+#include<QDebug>
 PlaylistModel::PlaylistModel(QObject *parent)
     : QAbstractListModel(parent)
 {
@@ -88,6 +88,7 @@ QVariant PlaylistModel::data(const QModelIndex &index, int role) const
 
 void PlaylistModel::addSong(Song &song)
 {
+    qDebug() << song.title().toStdString().c_str() << " " << song.singer().toStdString().c_str() << " " << endl;
     beginInsertRows(QModelIndex(),m_data.length(),m_data.length());
     m_data.append(song);
     endInsertRows();

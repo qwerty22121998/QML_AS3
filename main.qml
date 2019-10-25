@@ -3,15 +3,13 @@ import QtQuick.Controls 2.4
 import QtQuick.Layouts 1.1
 import QtMultimedia 5.8
 
-import "Utility.js" as Utility
-
 ApplicationWindow {
     visible: true
     width: 1920
     height: 1080
     visibility: "FullScreen"
     title: qsTr("Media Player")
-    //Backgroud of Application
+    //    Backgroud of Application
     Image {
         id: backgroud
         anchors.fill: parent
@@ -64,8 +62,7 @@ ApplicationWindow {
                 font.pixelSize: 32
             }
             onClicked: {
-                mediaPlaylist.currentIndex = index
-                //                ...
+                player.playlist.setCurrentIndex(index)
             }
 
             onPressed: {
@@ -111,7 +108,7 @@ ApplicationWindow {
         anchors.top: audioTitle.bottom
         anchors.left: mediaPlaylist.right
         anchors.leftMargin: 20
-        text: mediaPlaylist.currentItem.myData.singer
+        text: mediaPlaylist.currentItem.myData.sing
         color: "white"
         font.pixelSize: 32
     }
@@ -155,7 +152,7 @@ ApplicationWindow {
                 height: parent.height
                 y: 20
                 anchors.horizontalCenter: parent.horizontalCenter
-                source: album_art
+                source: albumArt
             }
 
             MouseArea {
@@ -202,7 +199,7 @@ ApplicationWindow {
             }
         }
         onCurrentIndexChanged: {
-            mediaPlaylist.currentIndex = currentIndex
+            player.playlist.setCurrentIndex(currentIndex)
         }
     }
     //Progress
@@ -212,7 +209,7 @@ ApplicationWindow {
         anchors.bottomMargin: 250
         anchors.left: mediaPlaylist.right
         anchors.leftMargin: 120
-        text: Utility.toDuration(player.position)
+        text: m_player.getTimeInfo(player.position)
         color: "white"
         font.pixelSize: 24
     }
@@ -256,7 +253,7 @@ ApplicationWindow {
         }
         onMoved: {
             if (player.seekable) {
-                player.seek(value)
+                player.setPosition(value)
             }
         }
     }
@@ -266,7 +263,7 @@ ApplicationWindow {
         anchors.bottomMargin: 250
         anchors.left: progressBar.right
         anchors.leftMargin: 20
-        text: Utility.toDuration(player.duration)
+        text: m_player.getTimeInfo(player.duration)
         color: "white"
         font.pixelSize: 24
     }
@@ -279,13 +276,10 @@ ApplicationWindow {
         anchors.leftMargin: 120
         icon_off: "qrc:/Image/shuffle.png"
         icon_on: "qrc:/Image/shuffle-1.png"
-        status: player.suffer
+        status: m_player.random
         onClicked: {
-            if (!player.shuffer) {
-                player.shuffer = true
-            } else {
-                player.shuffer = false
-            }
+            m_player.toggleRandom()
+            status = m_player.random
         }
     }
     ButtonControl {
@@ -298,24 +292,21 @@ ApplicationWindow {
         icon_pressed: "qrc:/Image/hold-prev.png"
         icon_released: "qrc:/Image/prev.png"
         onClicked: {
-            mediaPlaylist.currentIndex = Math.max(
-                        0, mediaPlaylist.currentIndex - 1)
+            m_player.prev()
         }
     }
     ButtonControl {
         id: play
         anchors.verticalCenter: prev.verticalCenter
         anchors.left: prev.right
-        icon_default: player.state
-                      == MediaPlayer.PlayingState ? "qrc:/Image/pause.png" : "qrc:/Image/play.png"
-        icon_pressed: player.state == MediaPlayer.PlayingState ? "qrc:/Image/hold-pause.png" : "qrc:/Image/hold-play.png"
-        icon_released: player.state
-                       == MediaPlayer.PlayingState ? "qrc:/Image/pause.png" : "qrc:/Image/play.png"
+        icon_default: player.state == 1 ? "qrc:/Image/pause.png" : "qrc:/Image/play.png"
+        icon_pressed: player.state == 1 ? "qrc:/Image/hold-pause.png" : "qrc:/Image/hold-play.png"
+        icon_released: player.state == 1 ? "qrc:/Image/pause.png" : "qrc:/Image/play.png"
         onClicked: {
-            if (player.playbackState == MediaPlayer.PlayingState)
-                player.pause()
-            else
+            if (player.state != 1)
                 player.play()
+            else
+                player.pause()
         }
         Connections {
             target: player
@@ -334,19 +325,7 @@ ApplicationWindow {
         icon_pressed: "qrc:/Image/hold-next.png"
         icon_released: "qrc:/Image/next.png"
         onClicked: {
-            if (player.shuffer) {
-                var currentIndex = mediaPlaylist.currentIndex
-                var newIndex = currentIndex
-                do {
-                    newIndex = Math.floor(
-                                Math.random(
-                                    ) * mediaPlaylist.count) % mediaPlaylist.count
-                    mediaPlaylist.currentIndex = newIndex
-                } while (newIndex === currentIndex)
-            } else if (mediaPlaylist.currentIndex < mediaPlaylist.count - 1
-                       && !player.shuffer) {
-                mediaPlaylist.currentIndex++
-            }
+            m_player.next()
         }
     }
     SwitchButton {
@@ -356,16 +335,18 @@ ApplicationWindow {
         anchors.right: totalTime.right
         icon_on: "qrc:/Image/repeat1_hold.png"
         icon_off: "qrc:/Image/repeat.png"
-        status: player.playlist.playbackMode === Playlist.Loop ? 1 : 0
+        status: m_player.loop
+
         onClicked: {
-            player.loops = status == 0 ? 1 : MediaPlayer.Infinite
+            m_player.toggleLoop()
+            status = m_player.loop
         }
     }
     Connections {
         target: player.playlist
         onCurrentIndexChanged: {
-
-            //            ...
+            mediaPlaylist.currentIndex = index
+            album_art_view.currentIndex = index
         }
     }
 }

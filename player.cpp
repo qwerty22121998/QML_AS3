@@ -50,7 +50,6 @@
 
 #include "player.h"
 #include "playlistmodel.h"
-
 #include <QMediaService>
 #include <QMediaPlaylist>
 #include <QMediaMetaData>
@@ -59,6 +58,7 @@
 #include <QTime>
 #include <QDir>
 #include <QStandardPaths>
+#include<QDebug>
 
 Player::Player(QObject *parent)
     : QObject(parent)
@@ -71,16 +71,15 @@ Player::Player(QObject *parent)
     if (!m_playlist->isEmpty()) {
         m_playlist->setCurrentIndex(0);
     }
+    m_playlist->setPlaybackMode(QMediaPlaylist::Loop);
 }
 
 void Player::open()
 {
     QDir directory(QStandardPaths::standardLocations(QStandardPaths::MusicLocation)[0]);
-    qDebug() << directory.path();
     QFileInfoList musics = directory.entryInfoList(QStringList() << "*.mp3",QDir::Files);
     QList<QUrl> urls;
     for (int i = 0; i < musics.length(); i++){
-        qDebug() << musics[i].absoluteFilePath();
         urls.append(QUrl::fromLocalFile(musics[i].absoluteFilePath()));
     }
     addToPlaylist(urls);
@@ -91,61 +90,66 @@ void Player::addToPlaylist(const QList<QUrl> &urls)
     for (auto &url: urls) {
 
         m_playlist->addMedia(url);
-        //        TagLib::MPEG::File f(url.path().toStdString().c_str());
 
-        FileRef f(url.path().toStdString().c_str());
+        const char * path = url.path().toStdString().c_str();
+        path++;
+        FileRef f(path);
+
         Tag *tag = f.tag();
-        Song song(QString::fromWCharArray(tag->title().toCWString()),
-                  QString::fromWCharArray(tag->artist().toCWString()),url.toDisplayString(),
-                  getAlbumArt(url));
-
-
-        m_playlistModel->addSong(song);
+        if (tag) {
+            Song song(QString::fromWCharArray(tag->title().toCWString()),
+                      QString::fromWCharArray(tag->artist().toCWString()),url.toDisplayString(),
+                      getAlbumArt(dynamic_cast<TagLib::MPEG::File*>(f.file())));
+            m_playlistModel->addSong(song);
+        }
 
     }
+
 }
+
+
+
 
 QString Player::getTimeInfo(qint64 currentInfo)
 {
     QString tStr = "00:00";
     currentInfo = currentInfo/1000;
-    qint64 durarion = m_player->duration()/1000;
-    if (currentInfo || durarion) {
+    qint64 duration = m_player->duration()/1000;
+    if (currentInfo || duration) {
         QTime currentTime((currentInfo / 3600) % 60, (currentInfo / 60) % 60,
                           currentInfo % 60, (currentInfo * 1000) % 1000);
-        QTime totalTime((durarion / 3600) % 60, (m_player->duration() / 60) % 60,
-                        durarion % 60, (m_player->duration() * 1000) % 1000);
+        QTime totalTime((duration / 3600) % 60, (m_player->duration() / 60) % 60,
+                        duration % 60, (m_player->duration() * 1000) % 1000);
         QString format = "mm:ss";
-        if (durarion > 3600)
+        if (duration > 3600)
             format = "hh::mm:ss";
         tStr = currentTime.toString(format);
     }
     return tStr;
 }
 
-QString Player::getAlbumArt(QUrl url)
+QString Player::getAlbumArt(MPEG::File* mpegFile)
 {
     static const char *IdPicture = "APIC" ;
-    TagLib::MPEG::File mpegFile(url.path().toStdString().c_str());
-    TagLib::ID3v2::Tag *id3v2tag = mpegFile.ID3v2Tag();
+
+
+    TagLib::ID3v2::Tag *id3v2tag = mpegFile->ID3v2Tag();
     TagLib::ID3v2::FrameList Frame ;
     TagLib::ID3v2::AttachedPictureFrame *PicFrame ;
     void *SrcImage ;
     unsigned long Size ;
-
+    auto name = mpegFile->name().toString() + ".jpg";
     FILE *jpegFile;
-    jpegFile = fopen(QString(url.fileName()+".jpg").toStdString().c_str(),"wb");
+    jpegFile = fopen(name.toCString(),"wb");
 
     if ( id3v2tag )
     {
-        // picture frame
         Frame = id3v2tag->frameListMap()[IdPicture] ;
         if (!Frame.isEmpty() )
         {
             for(TagLib::ID3v2::FrameList::ConstIterator it = Frame.begin(); it != Frame.end(); ++it)
             {
                 PicFrame = static_cast<TagLib::ID3v2::AttachedPictureFrame*>(*it) ;
-                //                if ( PicFrame->type() == (TagLib::ID3v2::AttachedPictureFrame::FrontCover))
                 {
                     // extract image (in it’s compressed form)
                     Size = PicFrame->picture().size() ;
@@ -156,7 +160,7 @@ QString Player::getAlbumArt(QUrl url)
                         fwrite(SrcImage,Size,1, jpegFile);
                         fclose(jpegFile);
                         free( SrcImage ) ;
-                        return QUrl::fromLocalFile(url.fileName()+".jpg").toDisplayString();
+                        return QUrl::fromLocalFile(name.toCString()).toDisplayString();
                     }
 
                 }
@@ -169,4 +173,36 @@ QString Player::getAlbumArt(QUrl url)
         return "qrc:/Image/album_art.png";
     }
     return "qrc:/Image/album_art.png";
+}
+
+
+
+void Player::updatePlaybackMode() {
+    auto status = QMediaPlaylist::Loop;
+    if (m_random) status = QMediaPlaylist::Random;
+    if (m_loop) status = QMediaPlaylist::CurrentItemInLoop;
+    m_playlist->setPlaybackMode(status);
+}
+
+void Player::next() {
+    if (m_playlist->playbackMode() == QMediaPlaylist::CurrentItemInLoop) {
+        if (m_random) m_playlist->setPlaybackMode(QMediaPlaylist::Random) ;
+        else m_playlist->setPlaybackMode(QMediaPlaylist::Loop);
+        m_playlist->next();
+        m_playlist->setPlaybackMode(QMediaPlaylist::CurrentItemInLoop);
+    } else {
+        m_playlist->next();
+    }
+}
+
+
+void Player::prev() {
+    if (m_playlist->playbackMode() == QMediaPlaylist::CurrentItemInLoop) {
+        if (m_random) m_playlist->setPlaybackMode(QMediaPlaylist::Random) ;
+        else m_playlist->setPlaybackMode(QMediaPlaylist::Loop);
+        m_playlist->previous();
+        m_playlist->setPlaybackMode(QMediaPlaylist::CurrentItemInLoop);
+    } else {
+        m_playlist->previous();
+    }
 }

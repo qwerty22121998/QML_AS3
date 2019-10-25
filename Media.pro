@@ -10,14 +10,11 @@ SOURCES += \
 RESOURCES += qml.qrc
 
 # Additional import path used to resolve QML modules in Qt Creator's code model
-QML_IMPORT_PATH = $$PWD/ohMyTaglib/include
+QML_IMPORT_PATH =
 
 # Additional import path used to resolve QML modules just for Qt Quick Designer
 QML_DESIGNER_IMPORT_PATH =
 
-LIBS += -L$$PWD/ohMyTaglib/ -lohMyTaglib
-INCLUDEPATH += $$PWD/ohMyTaglib/include
-DEPENDPATH += $$PWD/ohMyTaglib/include
 
 
 # Default rules for deployment.
@@ -32,3 +29,12 @@ DISTFILES +=
 HEADERS += \
     player.h \
     playlistmodel.h
+
+
+
+DEFINES += TAGLIB_STATIC
+
+
+LIBS += -L$$PWD/ohMyTaglib/ -lohMyTaglib
+INCLUDEPATH += $$PWD/ohMyTaglib/include
+DEPENDPATH += $$PWD/ohMyTaglib/include
